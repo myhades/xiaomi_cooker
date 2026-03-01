@@ -1,135 +1,241 @@
-import logging
+"""Sensor platform for Xiaomi Electric Rice Cooker."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+import re
 
-from homeassistant.components.sensor import ENTITY_ID_FORMAT
-from homeassistant.core import callback
-from homeassistant.helpers.entity import Entity
-from homeassistant.util import slugify
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import STATE_UNKNOWN, UnitOfTemperature, UnitOfTime
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-_LOGGER = logging.getLogger(__name__)
+from .const import DATA_COORDINATORS, DOMAIN
+from .entity import XiaomiMiioCookerEntity
 
-COOKER_DOMAIN = "xiaomi_miio_cooker"
-DATA_KEY = "xiaomi_miio_cooker_data"
-DATA_TEMPERATURE_HISTORY = "temperature_history"
-DATA_STATE = "state"
-
-SENSOR_TYPES = {
-    "mode": ["Mode", None, "mode", None, "mdi:bowl"],
-    "menu": ["Menu", None, "menu", None, "mdi:menu"],
-    "temperature": ["Temperature", None, "temperature", "°C", None],
-    "remaining": ["Remaining", None, "remaining", "min", "mdi:timer"],
-    "duration": ["Duration", None, "duration", "min", "mdi:timelapse"],
-    "favorite": ["Favorite", None, "favorite", None, "mdi:information-outline"],
-    "state": ["State", "stage", "state", None, "mdi:playlist-check"],
-    "rice_id": ["Rice Id", "stage", "rice_id", None, "mdi:rice"],
-    "taste": ["Taste", "stage", "taste", None, "mdi:flash-outline"],
-    "taste_phase": ["Taste Phase", "stage", "taste_phase", None, "mdi:flash-outline"],
-    "stage_name": ["Stage Name", "stage", "name", None, "mdi:stairs"],
-    "stage_description": [
-        "Stage Description",
-        "stage",
-        "description",
-        None,
-        "mdi:stairs",
-    ],
-}
+CAMEL_CASE_PATTERN = re.compile(r"(?<!^)(?=[A-Z])")
+MODE_OPTIONS = ("off", "waiting", "running", "auto_keep_warm")
 
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Set up the Xiaomi Cooker sensors."""
-    if discovery_info is None:
-        return
+@dataclass(frozen=True, kw_only=True)
+class XiaomiCookerSensorDescription(SensorEntityDescription):
+    """Describes a Xiaomi cooker sensor."""
 
-    sensors = []
-
-    for host, cooker in hass.data[COOKER_DOMAIN].items():
-        for type in SENSOR_TYPES.values():
-            sensors.append(XiaomiCookerSensor(cooker, host, type))
-
-    add_devices(sensors)
+    child: str | None = None
+    attribute_name: str
+    enum_options: tuple[str, ...] | None = None
 
 
-class XiaomiCookerSensor(Entity):
-    def __init__(self, device, host, config):
-        """Initialize sensor."""
-        self._device = device
-        self._host = host
-        self._name = config[0]
-        self._child = config[1]
-        self._attr = config[2]
-        self._unit_of_measurement = config[3]
-        self._icon = config[4]
-        self._state = None
+SENSOR_DESCRIPTIONS: tuple[XiaomiCookerSensorDescription, ...] = (
+    XiaomiCookerSensorDescription(
+        key="mode",
+        name="Mode",
+        translation_key="mode",
+        icon="mdi:bowl",
+        device_class=SensorDeviceClass.ENUM,
+        attribute_name="mode",
+        enum_options=MODE_OPTIONS,
+    ),
+    XiaomiCookerSensorDescription(
+        key="menu",
+        name="Menu",
+        translation_key="menu",
+        icon="mdi:menu",
+        attribute_name="menu",
+    ),
+    XiaomiCookerSensorDescription(
+        key="temperature",
+        name="Temperature",
+        translation_key="temperature",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        attribute_name="temperature",
+    ),
+    XiaomiCookerSensorDescription(
+        key="remaining",
+        name="Remaining",
+        translation_key="remaining",
+        icon="mdi:timer",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        attribute_name="remaining",
+    ),
+    XiaomiCookerSensorDescription(
+        key="duration",
+        name="Duration",
+        translation_key="duration",
+        icon="mdi:timelapse",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        attribute_name="duration",
+    ),
+    XiaomiCookerSensorDescription(
+        key="favorite",
+        name="Favorite",
+        translation_key="favorite",
+        icon="mdi:information-outline",
+        attribute_name="favorite",
+    ),
+    XiaomiCookerSensorDescription(
+        key="lid_open_timeout",
+        name="Auto keep-warm lid open timeout",
+        translation_key="lid_open_timeout",
+        icon="mdi:timer-cog-outline",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        entity_category=EntityCategory.CONFIG,
+        attribute_name="lid_open_timeout",
+    ),
+    XiaomiCookerSensorDescription(
+        key="state",
+        name="State",
+        translation_key="state",
+        icon="mdi:playlist-check",
+        child="stage",
+        attribute_name="state",
+    ),
+    XiaomiCookerSensorDescription(
+        key="rice_id",
+        name="Rice ID",
+        translation_key="rice_id",
+        icon="mdi:rice",
+        child="stage",
+        attribute_name="rice_id",
+    ),
+    XiaomiCookerSensorDescription(
+        key="taste",
+        name="Taste",
+        translation_key="taste",
+        icon="mdi:flash-outline",
+        child="stage",
+        attribute_name="taste",
+    ),
+    XiaomiCookerSensorDescription(
+        key="taste_phase",
+        name="Taste phase",
+        translation_key="taste_phase",
+        icon="mdi:flash-outline",
+        child="stage",
+        attribute_name="taste_phase",
+    ),
+    XiaomiCookerSensorDescription(
+        key="stage_name",
+        name="Stage name",
+        translation_key="stage_name",
+        icon="mdi:stairs",
+        child="stage",
+        attribute_name="name",
+    ),
+    XiaomiCookerSensorDescription(
+        key="stage_description",
+        name="Stage description",
+        translation_key="stage_description",
+        icon="mdi:stairs",
+        child="stage",
+        attribute_name="description",
+    ),
+)
 
-        self.entity_id = ENTITY_ID_FORMAT.format(
-            "{}_{}".format(COOKER_DOMAIN, slugify(self._name))
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up Xiaomi cooker sensors from a config entry."""
+    coordinator = hass.data[DOMAIN][DATA_COORDINATORS][entry.entry_id]
+    async_add_entities(
+        XiaomiCookerSensor(coordinator, description) for description in SENSOR_DESCRIPTIONS
+    )
+
+
+class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
+    """Representation of a Xiaomi cooker sensor."""
+
+    entity_description: XiaomiCookerSensorDescription
+
+    def __init__(
+        self,
+        coordinator,
+        description: XiaomiCookerSensorDescription,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(
+            coordinator,
+            unique_key=description.key,
+            name=description.name or description.key,
+            translation_key=description.translation_key,
         )
-
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        async_dispatcher_connect(
-            self.hass,"{}_updated".format(COOKER_DOMAIN), self.async_update_callback
-        )
+        self.entity_description = description
+        self._attr_device_class = description.device_class
+        self._attr_icon = description.icon
+        self._attr_native_unit_of_measurement = description.native_unit_of_measurement
+        self._attr_state_class = description.state_class
+        self._attr_entity_category = description.entity_category
 
     @property
-    def name(self):
-        """Return the name."""
-        return self._name
+    def options(self) -> list[str] | None:
+        """Return enum options for sensors with a bounded state set."""
+        if self.entity_description.enum_options is None:
+            return None
 
-    @callback
-    def async_update_callback(self, host):
-        """Update state."""
-        from miio.cooker import OperationMode
+        return list(self.entity_description.enum_options)
 
-        if self._host is not host:
-            return
+    @property
+    def native_value(self):
+        """Return the native value of the sensor."""
+        raw_value = self._get_raw_value()
+        if self.entity_description.enum_options is not None and raw_value is not None:
+            normalized_value = self._normalize_enum_state(raw_value)
+            if normalized_value in self.entity_description.enum_options:
+                return normalized_value
+            return STATE_UNKNOWN
 
-        state = self.hass.data[DATA_KEY][host].get(DATA_STATE)
-        temperature_history = self.hass.data[DATA_KEY][host].get(
-            DATA_TEMPERATURE_HISTORY
-        )
+        return raw_value
 
-        if self._child is not None:
-            state = getattr(state, self._child, None)
-            # Unset state if child attribute isn't available anymore
+    def _get_raw_value(self):
+        """Return the raw value provided by the coordinator snapshot."""
+        data = self.coordinator.data
+        if data is None:
+            return None
+
+        if self.entity_description.key == "temperature":
+            return data.temperature
+
+        if self.entity_description.key == "lid_open_timeout":
+            return self.coordinator.lid_open_timeout_minutes
+
+        if data.status is None:
+            return None
+
+        state = data.status
+        if self.entity_description.child is not None:
+            state = getattr(state, self.entity_description.child, None)
             if state is None:
-                self._state = None
+                return None
 
-        if state is not None:
-            value = getattr(state, self._attr, None)
-            if isinstance(value, Enum):
-                self._state = value.name
+        return getattr(state, self.entity_description.attribute_name, None)
+
+    @staticmethod
+    def _normalize_enum_state(value: Enum | str) -> str:
+        """Normalize enum state values to the lowercase format HA expects."""
+        if isinstance(value, Enum):
+            if isinstance(value.value, str):
+                raw_value = value.value
             else:
-                if (
-                    self._attr == "temperature"
-                    and state.mode
-                    in [OperationMode.Running, OperationMode.AutoKeepWarm]
-                    and temperature_history
-                ):
-                    self._state = temperature_history.temperatures.pop()
-                else:
-                    self._state = value
+                raw_value = value.name
+        else:
+            raw_value = str(value)
 
-        self.async_schedule_update_ha_state()
-
-    @property
-    def state(self):
-        """Return the state."""
-        return self._state
-
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement the state is expressed in."""
-        return self._unit_of_measurement
-
-    @property
-    def icon(self) -> Optional[str]:
-        """Return the icon to use in the frontend, if any."""
-        return self._icon
-
-    @property
-    def should_poll(self):
-        """Return the polling state."""
-        return False
+        normalized = CAMEL_CASE_PATTERN.sub("_", raw_value)
+        normalized = normalized.replace("-", "_").replace(" ", "_")
+        return normalized.lower()

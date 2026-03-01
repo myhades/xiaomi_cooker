@@ -1,0 +1,121 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "设置小米电饭煲",
+        "data": {
+          "host": "IP 地址",
+          "token": "令牌",
+          "model": "型号"
+        }
+      }
+    },
+    "error": {
+      "cannot_detect_model": "无法自动检测设备型号",
+      "cannot_connect": "无法连接到设备",
+      "unsupported_model": "不支持的设备型号",
+      "unknown": "发生未知错误"
+    },
+    "abort": {
+      "already_configured": "设备已配置"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "panel_display_auto_off": {
+        "name": "面板自动熄屏"
+      },
+      "lid_open_warning": {
+        "name": "开盖报警"
+      }
+    },
+    "button": {
+      "start_cooking": {
+        "name": "开始烹饪"
+      },
+      "stop_cooking": {
+        "name": "停止烹饪"
+      }
+    },
+    "select": {
+      "cooking_menu": {
+        "name": "烹饪菜单",
+        "state": {
+          "jingzhu": "精煮",
+          "kuaizhu": "快煮",
+          "zhuzhou": "煮粥",
+          "baowen": "保温",
+          "cake": "蛋糕",
+          "yoghurt": "酸奶",
+          "refan": "热饭",
+          "cooking": "烹饪",
+          "sweet_rice": "甜饭",
+          "quick_rice": "快速煮饭"
+        }
+      }
+    },
+    "sensor": {
+      "mode": {
+        "name": "模式",
+        "state": {
+          "off": "关闭",
+          "waiting": "待机",
+          "running": "运行中",
+          "auto_keep_warm": "保温中"
+        }
+      },
+      "menu": {
+        "name": "菜单"
+      },
+      "temperature": {
+        "name": "温度"
+      },
+      "remaining": {
+        "name": "剩余时间"
+      },
+      "duration": {
+        "name": "时长"
+      },
+      "favorite": {
+        "name": "收藏"
+      },
+      "lid_open_timeout": {
+        "name": "自动保温开盖超时"
+      },
+      "state": {
+        "name": "状态"
+      },
+      "rice_id": {
+        "name": "米种"
+      },
+      "taste": {
+        "name": "口感"
+      },
+      "taste_phase": {
+        "name": "口感阶段"
+      },
+      "stage_name": {
+        "name": "阶段名称"
+      },
+      "stage_description": {
+        "name": "阶段说明"
+      }
+    }
+  },
+  "services": {
+    "start": {
+      "name": "开始烹饪",
+      "description": "启动一个烹饪配置。",
+      "fields": {
+        "device_id": {
+          "name": "设备",
+          "description": "目标小米电饭煲设备。"
+        },
+        "profile": {
+          "name": "配置",
+          "description": "描述温度曲线的烹饪配置。"
+        }
+      }
+    }
+  }
+}

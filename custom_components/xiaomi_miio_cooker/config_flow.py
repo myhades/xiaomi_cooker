@@ -1,0 +1,153 @@
+"""Config flow for Xiaomi Electric Rice Cooker."""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+import voluptuous as vol
+from homeassistant import config_entries
+from homeassistant.const import CONF_HOST, CONF_TOKEN
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
+from miio import DeviceException
+
+from .api import (
+    UnsupportedModelError,
+    XiaomiMiioCookerApi,
+    build_entry_title,
+    build_unique_id,
+)
+from .const import CONF_MODEL, DOMAIN, MODEL_AUTO, SUPPORTED_MODELS
+
+_LOGGER = logging.getLogger(__name__)
+
+
+class CannotConnect(Exception):
+    """Error to indicate we cannot connect."""
+
+
+class CannotDetectModel(Exception):
+    """Error to indicate automatic model detection failed."""
+
+
+async def _async_validate_input(
+    hass: HomeAssistant,
+    data: dict[str, Any],
+) -> dict[str, str | None]:
+    """Validate the user input allows us to connect."""
+    selected_model = data.get(CONF_MODEL) or MODEL_AUTO
+    configured_model = None if selected_model == MODEL_AUTO else selected_model
+    api = XiaomiMiioCookerApi(
+        host=data[CONF_HOST],
+        token=data[CONF_TOKEN],
+        model=configured_model,
+    )
+
+    metadata = None
+    if configured_model is None:
+        try:
+            metadata = await hass.async_add_executor_job(api.fetch_device_info)
+        except DeviceException as err:
+            raise CannotDetectModel from err
+
+        if not metadata.model:
+            raise CannotDetectModel
+
+        if metadata.model not in SUPPORTED_MODELS:
+            raise UnsupportedModelError(
+                f"Unsupported device found: {metadata.model}"
+            )
+
+    try:
+        if configured_model is None:
+            initial_data = await hass.async_add_executor_job(api.fetch_data)
+        else:
+            initial_data = await hass.async_add_executor_job(api.validate)
+    except UnsupportedModelError as err:
+        raise UnsupportedModelError from err
+    except DeviceException as err:
+        raise CannotConnect from err
+
+    metadata = metadata or initial_data.device_info
+    resolved_model = configured_model or metadata.model
+    if not resolved_model:
+        raise CannotDetectModel
+
+    return {
+        "title": build_entry_title(),
+        "unique_id": build_unique_id(metadata.mac_address, metadata.model or resolved_model),
+        "model": resolved_model,
+    }
+
+
+class XiaomiMiioCookerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Xiaomi cooker."""
+
+    VERSION = 1
+
+    async def async_step_user(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> FlowResult:
+        """Handle the initial step."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            try:
+                info = await _async_validate_input(self.hass, user_input)
+            except CannotDetectModel:
+                errors["base"] = "cannot_detect_model"
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except UnsupportedModelError:
+                errors["base"] = "unsupported_model"
+            except Exception:  # pragma: no cover - defensive HA flow guard
+                _LOGGER.exception("Unexpected exception during Xiaomi cooker setup")
+                errors["base"] = "unknown"
+            else:
+                await self.async_set_unique_id(info["unique_id"])
+                self._abort_if_unique_id_configured(
+                    updates={
+                        CONF_HOST: user_input[CONF_HOST],
+                        CONF_TOKEN: user_input[CONF_TOKEN],
+                        CONF_MODEL: info["model"],
+                    }
+                )
+                return self.async_create_entry(
+                    title=info["title"],
+                    data={
+                        CONF_HOST: user_input[CONF_HOST],
+                        CONF_TOKEN: user_input[CONF_TOKEN],
+                        CONF_MODEL: info["model"],
+                    },
+                )
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self._build_schema(user_input),
+            errors=errors,
+        )
+
+    @staticmethod
+    @callback
+    def _build_schema(user_input: dict[str, Any] | None = None) -> vol.Schema:
+        """Build the config flow schema."""
+        user_input = user_input or {}
+        model_options = {
+            MODEL_AUTO: "Auto",
+            **{model: model for model in SUPPORTED_MODELS},
+        }
+        schema: dict = {
+            vol.Required(CONF_HOST, default=user_input.get(CONF_HOST, "")): str,
+            vol.Required(CONF_TOKEN, default=user_input.get(CONF_TOKEN, "")): vol.All(
+                str,
+                vol.Length(min=32, max=32),
+            ),
+            vol.Required(
+                CONF_MODEL,
+                default=user_input.get(CONF_MODEL) or MODEL_AUTO,
+            ): vol.In(model_options),
+        }
+
+        return vol.Schema(schema)

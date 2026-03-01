@@ -1,10 +1,10 @@
 {
   "domain": "xiaomi_miio_cooker",
-  "name": "Xiaomi Mi Electric Rice Cooker",
+  "name": "Xiaomi Electric Rice Cooker",
   "codeowners": [
     "@syssi"
   ],
-  "config_flow": false,
+  "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/syssi/xiaomi_cooker",
   "iot_class": "local_polling",
@@ -13,5 +13,5 @@
     "construct==2.10.68",
     "python-miio>=0.5.12"
   ],
-  "version": "2025.5.0.0"
+  "version": "2026.3.2.9"
 }

@@ -52,8 +52,9 @@
         "state": {
           "off": "Off",
           "waiting": "Waiting",
+          "pre_cook": "Pre-cook",
           "running": "Running",
-          "auto_keep_warm": "Keep warm"
+          "auto_keep_warm": "Auto keep warm"
         }
       },
       "menu": {

@@ -52,8 +52,9 @@
         "state": {
           "off": "关闭",
           "waiting": "待机",
+          "pre_cook": "已预约",
           "running": "运行中",
-          "auto_keep_warm": "保温中"
+          "auto_keep_warm": "自动保温"
         }
       },
       "menu": {
@@ -79,7 +80,7 @@
         }
       },
       "lid_open_warning": {
-        "name": "开盖报警",
+        "name": "开盖超时报警",
         "state": {
           "off": "关闭",
           "on": "开启"

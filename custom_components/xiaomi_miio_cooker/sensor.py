@@ -22,7 +22,7 @@ from .const import DATA_COORDINATORS, DOMAIN
 from .entity import XiaomiMiioCookerEntity
 
 CAMEL_CASE_PATTERN = re.compile(r"(?<!^)(?=[A-Z])")
-MODE_OPTIONS = ("off", "waiting", "running", "auto_keep_warm")
+MODE_OPTIONS = ("off", "waiting", "pre_cook", "running", "auto_keep_warm")
 BOOLEAN_OPTIONS = ("off", "on")
 
 

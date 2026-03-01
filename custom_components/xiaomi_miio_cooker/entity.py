@@ -25,9 +25,15 @@ class XiaomiMiioCookerEntity(CoordinatorEntity):
         """Initialize the entity."""
         super().__init__(coordinator)
         self._attr_name = name
+        self._suggested_object_id = f"xiaomi_rice_cooker_{unique_key}"
         if translation_key is not None:
             self._attr_translation_key = translation_key
         self._attr_unique_id = f"{coordinator.device_unique_id}_{unique_key}"
+
+    @property
+    def suggested_object_id(self) -> str | None:
+        """Return the default object ID used for entity_id generation."""
+        return self._suggested_object_id
 
     @property
     def device_info(self) -> dict:

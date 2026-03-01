@@ -43,7 +43,6 @@ SUPPORTED_MODELS = (
 
 PLATFORMS = [
     Platform.SENSOR,
-    Platform.BINARY_SENSOR,
     Platform.SELECT,
     Platform.BUTTON,
 ]

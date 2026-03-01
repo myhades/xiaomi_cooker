@@ -21,14 +21,6 @@
     }
   },
   "entity": {
-    "binary_sensor": {
-      "panel_display_auto_off": {
-        "name": "面板自动熄屏"
-      },
-      "lid_open_warning": {
-        "name": "开盖报警"
-      }
-    },
     "button": {
       "start_cooking": {
         "name": "开始烹饪"
@@ -78,6 +70,20 @@
       },
       "favorite": {
         "name": "收藏"
+      },
+      "panel_display_auto_off": {
+        "name": "面板自动熄屏",
+        "state": {
+          "off": "关闭",
+          "on": "开启"
+        }
+      },
+      "lid_open_warning": {
+        "name": "开盖报警",
+        "state": {
+          "off": "关闭",
+          "on": "开启"
+        }
       },
       "lid_open_timeout": {
         "name": "自动保温开盖超时"

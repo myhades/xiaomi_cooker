@@ -23,6 +23,7 @@ from .entity import XiaomiMiioCookerEntity
 
 CAMEL_CASE_PATTERN = re.compile(r"(?<!^)(?=[A-Z])")
 MODE_OPTIONS = ("off", "waiting", "running", "auto_keep_warm")
+BOOLEAN_OPTIONS = ("off", "on")
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -86,13 +87,33 @@ SENSOR_DESCRIPTIONS: tuple[XiaomiCookerSensorDescription, ...] = (
         attribute_name="favorite",
     ),
     XiaomiCookerSensorDescription(
+        key="panel_display_auto_off",
+        name="Panel display auto off",
+        translation_key="panel_display_auto_off",
+        icon="mdi:lightbulb-outline",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        attribute_name="panel_display_auto_off",
+        enum_options=BOOLEAN_OPTIONS,
+    ),
+    XiaomiCookerSensorDescription(
+        key="lid_open_warning",
+        name="Lid open alarm",
+        translation_key="lid_open_warning",
+        icon="mdi:bell-ring-outline",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        attribute_name="lid_open_warning",
+        enum_options=BOOLEAN_OPTIONS,
+    ),
+    XiaomiCookerSensorDescription(
         key="lid_open_timeout",
         name="Auto keep-warm lid open timeout",
         translation_key="lid_open_timeout",
         icon="mdi:timer-cog-outline",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
-        entity_category=EntityCategory.CONFIG,
+        entity_category=EntityCategory.DIAGNOSTIC,
         attribute_name="lid_open_timeout",
     ),
     XiaomiCookerSensorDescription(
@@ -211,6 +232,12 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
         if self.entity_description.key == "temperature":
             return data.temperature
 
+        if self.entity_description.key == "panel_display_auto_off":
+            return self._normalize_bool_state(self.coordinator.panel_display_auto_off_enabled)
+
+        if self.entity_description.key == "lid_open_warning":
+            return self._normalize_bool_state(self.coordinator.lid_open_warning_enabled)
+
         if self.entity_description.key == "lid_open_timeout":
             return self.coordinator.lid_open_timeout_minutes
 
@@ -239,3 +266,11 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
         normalized = CAMEL_CASE_PATTERN.sub("_", raw_value)
         normalized = normalized.replace("-", "_").replace(" ", "_")
         return normalized.lower()
+
+    @staticmethod
+    def _normalize_bool_state(value: bool | None) -> str | None:
+        """Normalize a boolean state into an enum string."""
+        if value is None:
+            return None
+
+        return "on" if value else "off"

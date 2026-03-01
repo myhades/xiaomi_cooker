@@ -12,7 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.typing import ConfigType
 
-from .api import XiaomiMiioCookerApi, build_entry_title, build_unique_id
+from .api import XiaomiMiioCookerApi, build_unique_id
 from .const import (
     ATTR_PROFILE,
     CONF_MODEL,
@@ -63,10 +63,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator.data.device_info.mac_address,
         coordinator.data.device_info.model or entry.data.get(CONF_MODEL),
     )
-    if entry.unique_id != expected_unique_id or entry.title != build_entry_title():
+    if entry.unique_id != expected_unique_id:
         hass.config_entries.async_update_entry(
             entry,
-            title=build_entry_title(),
             unique_id=expected_unique_id,
         )
         coordinator.device_unique_id = expected_unique_id
@@ -121,6 +120,8 @@ async def _async_register_services(hass: HomeAssistant) -> None:
     )
 
     domain_data[DATA_SERVICES_REGISTERED] = True
+
+
 def _async_resolve_coordinators(
     hass: HomeAssistant,
     call: ServiceCall,

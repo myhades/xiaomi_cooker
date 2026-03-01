@@ -21,14 +21,6 @@
     }
   },
   "entity": {
-    "binary_sensor": {
-      "panel_display_auto_off": {
-        "name": "Panel display auto off"
-      },
-      "lid_open_warning": {
-        "name": "Lid open alarm"
-      }
-    },
     "button": {
       "start_cooking": {
         "name": "Start cooking"
@@ -78,6 +70,20 @@
       },
       "favorite": {
         "name": "Favorite"
+      },
+      "panel_display_auto_off": {
+        "name": "Panel display auto off",
+        "state": {
+          "off": "Off",
+          "on": "On"
+        }
+      },
+      "lid_open_warning": {
+        "name": "Lid open alarm",
+        "state": {
+          "off": "Off",
+          "on": "On"
+        }
       },
       "lid_open_timeout": {
         "name": "Auto keep-warm lid open timeout"

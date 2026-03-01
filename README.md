@@ -34,6 +34,8 @@ Note that `chunmi.cooker.normal1` does not have built-in cooking profiles and co
   - remaining
   - duration
   - favorite
+  - panel display auto off
+  - lid open alarm
   - lid open timeout
   - state (available while cooking)
   - rice_id (available while cooking)
@@ -41,9 +43,6 @@ Note that `chunmi.cooker.normal1` does not have built-in cooking profiles and co
   - taste_phase (available while cooking)
   - stage_name (available while cooking)
   - stage_description (available while cooking)
-* Binary sensors
-  - panel display auto off
-  - lid open alarm
 * Selects
   - cooking menu
 * Buttons

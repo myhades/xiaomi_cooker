@@ -237,10 +237,8 @@ class XiaomiMiioCookerApi:
             )
 
         raw_status = self._cooker.status()
-        raw_status_data = getattr(raw_status, "data", {}) or {}
-        raw_func = str(raw_status_data.get("func", "")).lower()
         temperature = getattr(raw_status, "temperature", None)
-        if temperature is None and raw_func in {"running", "autokeepwarm", "keepwarm"}:
+        if temperature is None:
             temperature_history = self._cooker.get_temperature_history()
             temperatures = getattr(temperature_history, "temperatures", None)
             if temperatures:

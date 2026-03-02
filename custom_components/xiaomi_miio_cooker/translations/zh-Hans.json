@@ -50,15 +50,36 @@
       "mode": {
         "name": "模式",
         "state": {
-          "off": "关闭",
-          "waiting": "待机",
-          "pre_cook": "已预约",
-          "running": "运行中",
-          "auto_keep_warm": "自动保温"
+          "unknown": "未知",
+          "fine_cook": "精煮",
+          "quick_cook": "快煮",
+          "cook_congee": "煮粥",
+          "keep_warm": "保温"
+        }
+      },
+      "status": {
+        "name": "状态",
+        "state": {
+          "unknown": "未知",
+          "idle": "待机中",
+          "running": "烹饪中",
+          "keep_warm": "保温中",
+          "busy": "预约中"
         }
       },
       "menu": {
-        "name": "菜单"
+        "name": "菜单",
+        "state": {
+          "jingzhu": "精煮",
+          "kuaizhu": "快煮",
+          "zhuzhou": "煮粥",
+          "baowen": "保温",
+          "cake": "蛋糕",
+          "yoghurt": "酸奶",
+          "refan": "热饭",
+          "cooking": "蒸煮",
+          "other": "其他"
+        }
       },
       "temperature": {
         "name": "温度"
@@ -70,7 +91,18 @@
         "name": "时长"
       },
       "favorite": {
-        "name": "收藏"
+        "name": "收藏",
+        "state": {
+          "jingzhu": "精煮",
+          "kuaizhu": "快煮",
+          "zhuzhou": "煮粥",
+          "baowen": "保温",
+          "cake": "蛋糕",
+          "yoghurt": "酸奶",
+          "refan": "热饭",
+          "cooking": "蒸煮",
+          "other": "其他"
+        }
       },
       "panel_display_auto_off": {
         "name": "面板自动熄屏",
@@ -88,9 +120,6 @@
       },
       "lid_open_timeout": {
         "name": "自动保温开盖超时"
-      },
-      "state": {
-        "name": "状态"
       },
       "rice_id": {
         "name": "米种"

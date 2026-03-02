@@ -20,9 +20,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DATA_COORDINATORS, DOMAIN
 from .entity import XiaomiMiioCookerEntity
+from .profiles import COMMON_MENU_OPTIONS, COMMON_MENU_OTHER, get_menu_key
 
 CAMEL_CASE_PATTERN = re.compile(r"(?<!^)(?=[A-Z])")
-MODE_OPTIONS = ("off", "waiting", "pre_cook", "running", "auto_keep_warm")
+MODE_OPTIONS = ("unknown", "fine_cook", "quick_cook", "cook_congee", "keep_warm")
+STATUS_OPTIONS = ("unknown", "idle", "running", "keep_warm", "busy")
 BOOLEAN_OPTIONS = ("off", "on")
 
 
@@ -46,11 +48,22 @@ SENSOR_DESCRIPTIONS: tuple[XiaomiCookerSensorDescription, ...] = (
         enum_options=MODE_OPTIONS,
     ),
     XiaomiCookerSensorDescription(
+        key="status",
+        name="Status",
+        translation_key="status",
+        icon="mdi:information-outline",
+        device_class=SensorDeviceClass.ENUM,
+        attribute_name="status",
+        enum_options=STATUS_OPTIONS,
+    ),
+    XiaomiCookerSensorDescription(
         key="menu",
         name="Menu",
         translation_key="menu",
         icon="mdi:menu",
+        device_class=SensorDeviceClass.ENUM,
         attribute_name="menu",
+        enum_options=COMMON_MENU_OPTIONS,
     ),
     XiaomiCookerSensorDescription(
         key="temperature",
@@ -84,7 +97,9 @@ SENSOR_DESCRIPTIONS: tuple[XiaomiCookerSensorDescription, ...] = (
         name="Favorite",
         translation_key="favorite",
         icon="mdi:information-outline",
+        device_class=SensorDeviceClass.ENUM,
         attribute_name="favorite",
+        enum_options=COMMON_MENU_OPTIONS,
     ),
     XiaomiCookerSensorDescription(
         key="panel_display_auto_off",
@@ -115,14 +130,6 @@ SENSOR_DESCRIPTIONS: tuple[XiaomiCookerSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         entity_category=EntityCategory.DIAGNOSTIC,
         attribute_name="lid_open_timeout",
-    ),
-    XiaomiCookerSensorDescription(
-        key="state",
-        name="State",
-        translation_key="state",
-        icon="mdi:playlist-check",
-        child="stage",
-        attribute_name="state",
     ),
     XiaomiCookerSensorDescription(
         key="rice_id",
@@ -215,6 +222,9 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
     def native_value(self):
         """Return the native value of the sensor."""
         raw_value = self._get_raw_value()
+        if self.entity_description.key in {"menu", "favorite"}:
+            return self._normalize_menu_state(raw_value)
+
         if self.entity_description.enum_options is not None and raw_value is not None:
             normalized_value = self._normalize_enum_state(raw_value)
             if normalized_value in self.entity_description.enum_options:
@@ -251,6 +261,21 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
                 return None
 
         return getattr(state, self.entity_description.attribute_name, None)
+
+    @staticmethod
+    def _normalize_menu_state(value: int | str | None) -> str | None:
+        """Normalize menu IDs into stable enum keys with an other fallback."""
+        if value is None:
+            return None
+
+        if isinstance(value, int):
+            return get_menu_key(value) or COMMON_MENU_OTHER
+
+        raw_value = str(value).strip().lower()
+        if raw_value.isdigit():
+            return get_menu_key(int(raw_value)) or COMMON_MENU_OTHER
+
+        return COMMON_MENU_OTHER
 
     @staticmethod
     def _normalize_enum_state(value: Enum | str) -> str:

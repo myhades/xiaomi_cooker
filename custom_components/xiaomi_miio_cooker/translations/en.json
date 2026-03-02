@@ -50,15 +50,36 @@
       "mode": {
         "name": "Mode",
         "state": {
-          "off": "Off",
-          "waiting": "Waiting",
-          "pre_cook": "Pre-cook",
+          "unknown": "Unknown",
+          "fine_cook": "Fine cook",
+          "quick_cook": "Quick cook",
+          "cook_congee": "Cook congee",
+          "keep_warm": "Keep warm"
+        }
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "unknown": "Unknown",
+          "idle": "Idle",
           "running": "Running",
-          "auto_keep_warm": "Auto keep warm"
+          "keep_warm": "Keep warm",
+          "busy": "Busy"
         }
       },
       "menu": {
-        "name": "Menu"
+        "name": "Menu",
+        "state": {
+          "jingzhu": "Jingzhu",
+          "kuaizhu": "Kuaizhu",
+          "zhuzhou": "Zhuzhou",
+          "baowen": "Baowen",
+          "cake": "Cake",
+          "yoghurt": "Yoghurt",
+          "refan": "Refan",
+          "cooking": "Cooking",
+          "other": "Other"
+        }
       },
       "temperature": {
         "name": "Temperature"
@@ -70,7 +91,18 @@
         "name": "Duration"
       },
       "favorite": {
-        "name": "Favorite"
+        "name": "Favorite",
+        "state": {
+          "jingzhu": "Jingzhu",
+          "kuaizhu": "Kuaizhu",
+          "zhuzhou": "Zhuzhou",
+          "baowen": "Baowen",
+          "cake": "Cake",
+          "yoghurt": "Yoghurt",
+          "refan": "Refan",
+          "cooking": "Cooking",
+          "other": "Other"
+        }
       },
       "panel_display_auto_off": {
         "name": "Panel display auto off",
@@ -88,9 +120,6 @@
       },
       "lid_open_timeout": {
         "name": "Auto keep-warm lid open timeout"
-      },
-      "state": {
-        "name": "State"
       },
       "rice_id": {
         "name": "Rice ID"

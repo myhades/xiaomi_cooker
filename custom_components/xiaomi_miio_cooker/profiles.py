@@ -19,6 +19,18 @@ from .const import (
 
 PROFILE_DATA_FILE = "cooker_profiles.json"
 PROFILE_KEY_PATTERN = re.compile(r"[^a-z0-9]+")
+COMMON_MENU_ID_TO_KEY: dict[int, str] = {
+    1: "jingzhu",
+    2: "kuaizhu",
+    3: "zhuzhou",
+    4: "baowen",
+    256: "cake",
+    257: "yoghurt",
+    258: "refan",
+    259: "cooking",
+}
+COMMON_MENU_OTHER = "other"
+COMMON_MENU_OPTIONS = (*COMMON_MENU_ID_TO_KEY.values(), COMMON_MENU_OTHER)
 
 PROFILE_GROUP_MODELS: dict[str, tuple[str, ...]] = {
     "MODEL_PRESSURE": (MODEL_PRESSURE1, MODEL_PRESSURE2),
@@ -79,3 +91,11 @@ def get_profiles_for_model(model: str | None) -> tuple[CookingProfile, ...]:
         return ()
 
     return _load_profiles_by_group().get(group, ())
+
+
+def get_menu_key(menu_id: int | None) -> str | None:
+    """Return the stable enum key for a known common menu ID."""
+    if menu_id is None:
+        return None
+
+    return COMMON_MENU_ID_TO_KEY.get(menu_id)

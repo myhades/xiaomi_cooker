@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from miio import Cooker, Device
-from miio.cooker import OperationMode
 
 from .const import DEFAULT_NAME, DOMAIN, SUPPORTED_MODELS
 
@@ -53,6 +52,7 @@ class CookerStatusData:
     """Runtime cooker data used by the exposed sensors."""
 
     mode: Any
+    status: Any
     menu: Any
     remaining: Any
     duration: Any
@@ -125,14 +125,60 @@ def _build_stage_data(stage: Any) -> CookerStageData | None:
 
 def _build_status_data(status: Any) -> CookerStatusData:
     """Convert a python-miio status object into an immutable snapshot."""
+    raw_data = getattr(status, "data", {}) or {}
+    raw_func = str(raw_data.get("func", "")).lower()
+    raw_menu = str(raw_data.get("menu", "")).lower()
+
     return CookerStatusData(
-        mode=getattr(status, "mode", None),
-        menu=getattr(status, "menu", None),
+        mode=_map_cook_mode(raw_menu),
+        status=_map_work_status(raw_func),
+        menu=_parse_menu(raw_menu),
         remaining=getattr(status, "remaining", None),
         duration=getattr(status, "duration", None),
         favorite=getattr(status, "favorite", None),
         stage=_build_stage_data(getattr(status, "stage", None)),
     )
+
+
+def _parse_menu(raw_menu: str) -> int | None:
+    """Parse the raw menu value into an integer."""
+    if not raw_menu:
+        return None
+
+    try:
+        return int(raw_menu, 16)
+    except ValueError:
+        return None
+
+
+def _map_cook_mode(raw_menu: str) -> str:
+    """Map the raw cooker menu value to a stable cook mode enum."""
+    return {
+        "0001": "fine_cook",
+        "0002": "quick_cook",
+        "0003": "cook_congee",
+        "0004": "keep_warm",
+    }.get(raw_menu, "unknown")
+
+
+def _map_work_status(raw_func: str) -> str:
+    """Map the raw func value to a stable work status enum."""
+    return {
+        "waiting": "idle",
+        "running": "running",
+        "cooking": "running",
+        "autokeepwarm": "keep_warm",
+        "keepwarm": "keep_warm",
+        "keep_temp": "keep_warm",
+        "finish": "keep_warm",
+        "finisha": "keep_warm",
+        "precook": "busy",
+        "set02": "busy",
+        "start": "busy",
+        "startp": "busy",
+        "resume": "busy",
+        "resumep": "busy",
+    }.get(raw_func, "unknown")
 
 
 def _build_settings_data(settings: Any) -> CookerSettingsData | None:
@@ -191,11 +237,10 @@ class XiaomiMiioCookerApi:
             )
 
         raw_status = self._cooker.status()
+        raw_status_data = getattr(raw_status, "data", {}) or {}
+        raw_func = str(raw_status_data.get("func", "")).lower()
         temperature = getattr(raw_status, "temperature", None)
-        if (
-            temperature is None
-            and raw_status.mode in (OperationMode.Running, OperationMode.AutoKeepWarm)
-        ):
+        if temperature is None and raw_func in {"running", "autokeepwarm", "keepwarm"}:
             temperature_history = self._cooker.get_temperature_history()
             temperatures = getattr(temperature_history, "temperatures", None)
             if temperatures:

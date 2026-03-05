@@ -21,6 +21,7 @@ DATA_SERVICES_REGISTERED = "services_registered"
 DEFAULT_NAME = "Xiaomi Electric Rice Cooker"
 DEFAULT_UPDATE_INTERVAL = timedelta(seconds=30)
 COMMAND_REFRESH_DELAY = 2
+TEMPERATURE_HISTORY_MIN_INTERVAL_SECONDS = 120
 MANUFACTURER = "Xiaomi"
 
 MODEL_PRESSURE1 = "chunmi.cooker.press1"

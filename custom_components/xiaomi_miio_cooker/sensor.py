@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 import re
 
@@ -143,7 +143,7 @@ SENSOR_DESCRIPTIONS: tuple[XiaomiCookerSensorDescription, ...] = (
         key="taste",
         name="Taste",
         translation_key="taste",
-        icon="pot-mix-outline",
+        icon="mdi:pot-mix-outline",
         child="stage",
         attribute_name="taste",
     ),
@@ -203,7 +203,11 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
             name=description.name or description.key,
             translation_key=description.translation_key,
         )
-        self.entity_description = description
+        self.entity_description = (
+            replace(description, name=None)
+            if description.translation_key is not None
+            else description
+        )
         self._attr_device_class = description.device_class
         self._attr_icon = description.icon
         self._attr_native_unit_of_measurement = description.native_unit_of_measurement

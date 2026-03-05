@@ -3,11 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
+from time import monotonic
 from typing import Any
 
-from miio import Cooker, Device
+from miio import Cooker, Device, DeviceException
 
-from .const import DEFAULT_NAME, DOMAIN, SUPPORTED_MODELS
+from .const import (
+    DEFAULT_NAME,
+    DOMAIN,
+    SUPPORTED_MODELS,
+    TEMPERATURE_HISTORY_MIN_INTERVAL_SECONDS,
+)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class UnsupportedModelError(Exception):
@@ -93,14 +102,20 @@ def normalize_mac(mac_address: str | None) -> str | None:
 def build_unique_id(
     mac_address: str | None,
     model: str | None,
+    host: str | None = None,
 ) -> str:
     """Build a stable unique ID for a cooker."""
     normalized_mac = normalize_mac(mac_address)
     normalized_model = (model or DOMAIN).replace(".", "_")
-    if not normalized_mac:
-        return normalized_model
+    if normalized_mac:
+        return f"{normalized_model}_{normalized_mac.replace(':', '')}"
 
-    return f"{normalized_model}_{normalized_mac.replace(':', '')}"
+    if host:
+        normalized_host = host.strip().lower().replace(":", "_").replace(".", "_")
+        if normalized_host:
+            return f"{normalized_model}_{normalized_host}"
+
+    return f"{normalized_model}_unknown"
 
 
 def build_entry_title() -> str:
@@ -218,6 +233,9 @@ class XiaomiMiioCookerApi:
         self._device = Device(host, token)
         self._cooker = Cooker(host, token)
         self._device_info: CookerDeviceMetadata | None = None
+        self._last_temperature_history_fetch: float | None = None
+        self._cached_temperature_from_history: int | None = None
+        self._last_known_temperature: int | None = None
 
     def validate(self) -> CookerData:
         """Validate connectivity and return the initial data snapshot."""
@@ -239,10 +257,11 @@ class XiaomiMiioCookerApi:
         raw_status = self._cooker.status()
         temperature = getattr(raw_status, "temperature", None)
         if temperature is None:
-            temperature_history = self._cooker.get_temperature_history()
-            temperatures = getattr(temperature_history, "temperatures", None)
-            if temperatures:
-                temperature = temperatures[-1]
+            temperature = self._get_temperature_from_history()
+        if temperature is None:
+            temperature = self._last_known_temperature
+        else:
+            self._last_known_temperature = temperature
 
         return CookerData(
             device_info=device_info,
@@ -253,6 +272,28 @@ class XiaomiMiioCookerApi:
             ),
             temperature=temperature,
         )
+
+    def _get_temperature_from_history(self) -> int | None:
+        """Read cached temperature history and throttle expensive updates."""
+        now = monotonic()
+        if (
+            self._cached_temperature_from_history is not None
+            and self._last_temperature_history_fetch is not None
+            and now - self._last_temperature_history_fetch
+            < TEMPERATURE_HISTORY_MIN_INTERVAL_SECONDS
+        ):
+            return self._cached_temperature_from_history
+
+        try:
+            temperature_history = self._cooker.get_temperature_history()
+        except DeviceException as err:
+            _LOGGER.debug("Unable to refresh cooker temperature history: %s", err)
+            return self._cached_temperature_from_history
+
+        self._last_temperature_history_fetch = now
+        temperatures = getattr(temperature_history, "temperatures", None)
+        self._cached_temperature_from_history = temperatures[-1] if temperatures else None
+        return self._cached_temperature_from_history
 
     def start(self, profile: str) -> Any:
         """Start a cooking profile."""

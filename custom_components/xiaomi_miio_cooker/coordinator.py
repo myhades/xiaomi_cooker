@@ -14,12 +14,11 @@ from miio import DeviceException
 from .api import CookerData, UnsupportedModelError, XiaomiMiioCookerApi
 from .const import (
     COMMAND_REFRESH_DELAY,
-    CONF_MODEL,
     DEFAULT_NAME,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
 )
-from .profiles import get_profiles_for_model
+from .profiles import CookingProfile
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +31,7 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         hass: HomeAssistant,
         entry: ConfigEntry,
         api: XiaomiMiioCookerApi,
+        profiles: tuple[CookingProfile, ...],
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
@@ -45,7 +45,7 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         self.config_entry = entry
         self.device_unique_id = entry.unique_id or entry.entry_id
         self._command_lock = asyncio.Lock()
-        self._profiles = get_profiles_for_model(entry.data.get(CONF_MODEL))
+        self._profiles = profiles
         self._profiles_by_key = {profile.key: profile for profile in self._profiles}
         self._selected_profile = None
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -54,7 +54,11 @@ class XiaomiCookerSelect(XiaomiMiioCookerEntity, SelectEntity):
             name=description.name or description.key,
             translation_key=description.translation_key,
         )
-        self.entity_description = description
+        self.entity_description = (
+            replace(description, name=None)
+            if description.translation_key is not None
+            else description
+        )
         self._attr_icon = description.icon
 
     @property

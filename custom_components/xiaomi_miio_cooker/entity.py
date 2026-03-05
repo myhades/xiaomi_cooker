@@ -19,15 +19,16 @@ class XiaomiMiioCookerEntity(CoordinatorEntity):
         self,
         coordinator,
         unique_key: str,
-        name: str,
+        name: str | None,
         translation_key: str | None = None,
     ) -> None:
         """Initialize the entity."""
         super().__init__(coordinator)
-        self._attr_name = name
-        self._suggested_object_id = f"xiaomi_rice_cooker_{unique_key}"
         if translation_key is not None:
             self._attr_translation_key = translation_key
+        elif name is not None:
+            self._attr_name = name
+        self._suggested_object_id = f"xiaomi_rice_cooker_{unique_key}"
         self._attr_unique_id = f"{coordinator.device_unique_id}_{unique_key}"
 
     @property

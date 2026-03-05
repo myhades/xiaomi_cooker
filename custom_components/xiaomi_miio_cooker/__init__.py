@@ -23,6 +23,7 @@ from .const import (
     SERVICE_START,
 )
 from .coordinator import XiaomiMiioCookerCoordinator
+from .profiles import get_profiles_for_model
 
 SERVICE_START_SCHEMA = vol.Schema(
     {
@@ -57,11 +58,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         token=entry.data[CONF_TOKEN],
         model=entry.data.get(CONF_MODEL),
     )
-    coordinator = XiaomiMiioCookerCoordinator(hass, entry, api)
+    profiles = await hass.async_add_executor_job(
+        get_profiles_for_model,
+        entry.data.get(CONF_MODEL),
+    )
+    coordinator = XiaomiMiioCookerCoordinator(hass, entry, api, profiles)
     await coordinator.async_config_entry_first_refresh()
     expected_unique_id = build_unique_id(
         coordinator.data.device_info.mac_address,
         coordinator.data.device_info.model or entry.data.get(CONF_MODEL),
+        entry.data.get(CONF_HOST),
     )
     if entry.unique_id != expected_unique_id:
         hass.config_entries.async_update_entry(

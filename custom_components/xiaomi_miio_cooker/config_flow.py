@@ -49,7 +49,7 @@ async def _async_validate_input(
         try:
             metadata = await hass.async_add_executor_job(api.fetch_device_info)
         except DeviceException as err:
-            raise CannotDetectModel from err
+            raise CannotConnect from err
 
         if not metadata.model:
             raise CannotDetectModel
@@ -76,7 +76,11 @@ async def _async_validate_input(
 
     return {
         "title": build_entry_title(),
-        "unique_id": build_unique_id(metadata.mac_address, metadata.model or resolved_model),
+        "unique_id": build_unique_id(
+            metadata.mac_address,
+            metadata.model or resolved_model,
+            data[CONF_HOST],
+        ),
         "model": resolved_model,
     }
 
